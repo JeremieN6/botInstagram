@@ -1,0 +1,5 @@
+# Varibles d'environnement
+.env.local
+
+# Dossier du précédent projet (old)
+old/
