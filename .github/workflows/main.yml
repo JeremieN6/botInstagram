@@ -24,6 +24,7 @@ jobs:
 
       - name: Run the bot
         env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
           INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
         run: |
