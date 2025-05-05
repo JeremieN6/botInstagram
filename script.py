@@ -8,6 +8,7 @@ from instagrapi.exceptions import ChallengeRequired
 from dotenv import load_dotenv
 from telegram import Bot
 from datetime import datetime
+import requests
 
 # Load .env
 if os.path.exists(".env.local"):
@@ -17,6 +18,18 @@ if os.path.exists(".env.local"):
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
 chat_id = os.getenv("TELEGRAM_CHAT_ID")
 bot = Bot(token=bot_token)
+
+def send_telegram_message(message):
+    url = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendMessage"
+    params = {
+        "chat_id": os.getenv('TELEGRAM_CHAT_ID'),
+        "text": message,
+    }
+    response = requests.get(url, params=params)
+    return response
+
+# Test d'envoi d'un message
+send_telegram_message("✅ Test message - Bot is running.")
 
 def send_telegram_log(message):
     bot.send_message(chat_id=chat_id, text=message)
