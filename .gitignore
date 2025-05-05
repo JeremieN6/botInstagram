@@ -3,3 +3,6 @@
 
 # Dossier du précédent projet (old)
 old/
+
+# Fichier de session
+settings.json

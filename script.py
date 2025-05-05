@@ -1,12 +1,10 @@
+# script.py
 import os
 import time
 import random
-import logging
 from instagrapi import Client
 from instagrapi.exceptions import ChallengeRequired
 from dotenv import load_dotenv
-from telegram import Update, Bot
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from datetime import datetime
 import requests
 
@@ -14,31 +12,27 @@ import requests
 if os.path.exists(".env.local"):
     load_dotenv(".env.local")
 
-# Telegram init
-bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-chat_id = os.getenv("TELEGRAM_CHAT_ID")
-bot = Bot(token=bot_token)
-
+# Telegram
 def send_telegram_message(message):
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    url = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendMessage"
     params = {
-        "chat_id": chat_id,
+        "chat_id": os.getenv('TELEGRAM_CHAT_ID'),
         "text": message,
     }
-    response = requests.get(url, params=params)
-    return response
+    requests.get(url, params=params)
 
-def send_telegram_log(message):
-    bot.send_message(chat_id=chat_id, text=message)
+# Test
+send_telegram_message("✅ Test message - Bot is running.")
 
-def run_bot(origin="automatique"):
+# Instagram
+INSTAGRAM_USERNAME = os.getenv("INSTAGRAM_USERNAME")
+INSTAGRAM_PASSWORD = os.getenv("INSTAGRAM_PASSWORD")
+
+def run_bot(origin="manuel"):
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    send_telegram_log(f"🚀 Script lancé ({origin}) - {now}")
+    send_telegram_message(f"🚀 Script lancé en mode *{origin}* à {now}")
 
     cl = Client()
-    INSTAGRAM_USERNAME = os.getenv("INSTAGRAM_USERNAME")
-    INSTAGRAM_PASSWORD = os.getenv("INSTAGRAM_PASSWORD")
-
     try:
         if os.path.exists("settings.json"):
             cl.load_settings("settings.json")
@@ -46,7 +40,7 @@ def run_bot(origin="automatique"):
         else:
             raise Exception("Pas de settings.json")
     except ChallengeRequired:
-        send_telegram_log("⚠️ Challenge Instagram requis.")
+        send_telegram_message("⚠️ Challenge Instagram requis.")
         return
     except Exception:
         cl.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
@@ -57,41 +51,26 @@ def run_bot(origin="automatique"):
 
     for account in accounts:
         try:
-            send_telegram_log(f"🔍 Traitement de {account}...")
+            send_telegram_message(f"🔍 Traitement de {account}...")
             user_id = cl.user_id_from_username(account)
             medias = cl.user_medias(user_id, 5)
 
             for media in medias:
                 cl.media_like(media.id)
-                send_telegram_log(f"❤️ Post liké de {account}")
+                send_telegram_message(f"❤️ Post liké de {account}")
                 comments = cl.media_comments(media.id)
                 for comment in comments[:5]:
                     cl.comment_like(comment.pk)
-                    send_telegram_log(f"💬 Commentaire liké sur {account}")
+                    send_telegram_message(f"💬 Commentaire liké sur {account}")
                 time.sleep(random.uniform(2, 4))
         except ChallengeRequired:
-            send_telegram_log(f"🚫 Challenge required pour {account}")
+            send_telegram_message(f"🚫 Challenge required pour {account}")
         except Exception as e:
-            send_telegram_log(f"❌ Erreur {account} : {e}")
+            send_telegram_message(f"❌ Erreur {account} : {e}")
         time.sleep(random.uniform(5, 10))
 
-    send_telegram_log("✅ Script terminé.")
+    send_telegram_message(f"✅ Script terminé à {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-# Fonction /start Telegram
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="🟢 Bot lancé manuellement via Telegram !"
-    )
-    run_bot(origin="manuel")
-
+# 👇 LANCE LE BOT
 if __name__ == "__main__":
-    # Si lancé via GitHub ou à la main
-    if os.getenv("GITHUB_WORKFLOW"):
-        run_bot(origin="automatique")
-    else:
-        # Mode écoute de /start (manuel)
-        app = ApplicationBuilder().token(bot_token).build()
-        app.add_handler(CommandHandler("start", start))
-        send_telegram_log("📡 Bot prêt à recevoir la commande /start")
-        app.run_polling()
+    run_bot()
