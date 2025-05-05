@@ -1,4 +1,3 @@
-# script.py
 import os
 import time
 import random
@@ -6,7 +5,8 @@ import logging
 from instagrapi import Client
 from instagrapi.exceptions import ChallengeRequired
 from dotenv import load_dotenv
-from telegram import Bot
+from telegram import Update, Bot
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from datetime import datetime
 import requests
 
@@ -20,28 +20,25 @@ chat_id = os.getenv("TELEGRAM_CHAT_ID")
 bot = Bot(token=bot_token)
 
 def send_telegram_message(message):
-    url = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/sendMessage"
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     params = {
-        "chat_id": os.getenv('TELEGRAM_CHAT_ID'),
+        "chat_id": chat_id,
         "text": message,
     }
     response = requests.get(url, params=params)
     return response
 
-# Test d'envoi d'un message
-send_telegram_message("✅ Test message - Bot is running.")
-
 def send_telegram_log(message):
     bot.send_message(chat_id=chat_id, text=message)
 
-# Instagram init
-INSTAGRAM_USERNAME = os.getenv("INSTAGRAM_USERNAME")
-INSTAGRAM_PASSWORD = os.getenv("INSTAGRAM_PASSWORD")
-
-def run_bot(origin="manuel"):
-    send_telegram_log(f"🚀 Script lancé ({origin}) - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+def run_bot(origin="automatique"):
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    send_telegram_log(f"🚀 Script lancé ({origin}) - {now}")
 
     cl = Client()
+    INSTAGRAM_USERNAME = os.getenv("INSTAGRAM_USERNAME")
+    INSTAGRAM_PASSWORD = os.getenv("INSTAGRAM_PASSWORD")
+
     try:
         if os.path.exists("settings.json"):
             cl.load_settings("settings.json")
@@ -79,3 +76,22 @@ def run_bot(origin="manuel"):
         time.sleep(random.uniform(5, 10))
 
     send_telegram_log("✅ Script terminé.")
+
+# Fonction /start Telegram
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="🟢 Bot lancé manuellement via Telegram !"
+    )
+    run_bot(origin="manuel")
+
+if __name__ == "__main__":
+    # Si lancé via GitHub ou à la main
+    if os.getenv("GITHUB_WORKFLOW"):
+        run_bot(origin="automatique")
+    else:
+        # Mode écoute de /start (manuel)
+        app = ApplicationBuilder().token(bot_token).build()
+        app.add_handler(CommandHandler("start", start))
+        send_telegram_log("📡 Bot prêt à recevoir la commande /start")
+        app.run_polling()

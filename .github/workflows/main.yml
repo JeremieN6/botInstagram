@@ -2,9 +2,9 @@ name: Run InstaBot Twice a Day
 
 on:
   schedule:
-    - cron: "0 7 * * *"  # 7h du matin UTC (9h France)
-    - cron: "0 19 * * *" # 19h UTC (21h France)
-  workflow_dispatch:  # Permet aussi de le lancer à la main via GitHub
+    - cron: "0 7 * * *"  # 7h UTC = 9h France
+    - cron: "0 19 * * *" # 19h UTC = 21h France
+  workflow_dispatch:  # Exécution manuelle possible
 
 jobs:
   run-bot:
@@ -25,9 +25,13 @@ jobs:
       - name: Run the bot
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
           INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
+          GITHUB_WORKFLOW: true
         run: |
-          echo "INSTAGRAM_USERNAME=$INSTAGRAM_USERNAME" > .env.local
+          echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN" > .env.local
+          echo "TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID" >> .env.local
+          echo "INSTAGRAM_USERNAME=$INSTAGRAM_USERNAME" >> .env.local
           echo "INSTAGRAM_PASSWORD=$INSTAGRAM_PASSWORD" >> .env.local
           python script.py
