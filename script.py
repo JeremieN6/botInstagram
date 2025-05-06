@@ -45,29 +45,42 @@ def run_bot(origin="manuel"):
     except Exception:
         cl.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
         cl.dump_settings("settings.json")
+        
+    MAX_ACCOUNTS = 5  # à ajuster, par exemple 3 à 5 comptes max par session
+    MAX_LIKES_PER_ACCOUNT = 3  # on ne like que 3 posts max
+    MAX_COMMENT_LIKES_PER_POST = 2  # on ne like que 2 commentaires max par post
+
+    accounts = ["mathildtantot", "popstantot", "sophieraiin", "cecerose", "cece_rosee_", "yumi.etoo", "wettmelons", "devon.shae"]
+    random.shuffle(accounts)
 
     accounts = ["mathildtantot", "popstantot", "sophieraiin", "cecerose", "cece_rosee_", "yumi.etoo", "wettmelons", "devon.shae", "verofozzy"]
     random.shuffle(accounts)
 
-    for account in accounts:
+    for i, account in enumerate(accounts[:MAX_ACCOUNTS]):  # ⬅️ Limite le nombre d'accounts traités
         try:
             send_telegram_message(f"🔍 Traitement de {account}...")
+
             user_id = cl.user_id_from_username(account)
             medias = cl.user_medias(user_id, 5)
+            random.shuffle(medias)
 
-            for media in medias:
+            for media in medias[:MAX_LIKES_PER_ACCOUNT]:  # ⬅️ Limite les likes par compte
                 cl.media_like(media.id)
                 send_telegram_message(f"❤️ Post liké de {account}")
+
                 comments = cl.media_comments(media.id)
-                for comment in comments[:5]:
+                for comment in comments[:MAX_COMMENT_LIKES_PER_POST]:  # ⬅️ Limite les likes de commentaires
                     cl.comment_like(comment.pk)
                     send_telegram_message(f"💬 Commentaire liké sur {account}")
-                time.sleep(random.uniform(2, 4))
+
+                time.sleep(random.uniform(4, 7))  # pause entre posts
+
         except ChallengeRequired:
             send_telegram_message(f"🚫 Challenge required pour {account}")
         except Exception as e:
             send_telegram_message(f"❌ Erreur {account} : {e}")
-        time.sleep(random.uniform(5, 10))
+
+        time.sleep(random.uniform(15, 25))  # pause entre comptes
 
     send_telegram_message(f"✅ Script terminé à {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
