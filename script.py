@@ -17,6 +17,9 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 SETTINGS_PATH = "settings.json"
 
+# Déterminer si on est dans GitHub Actions
+IS_GITHUB_ACTION = os.getenv("GITHUB_WORKFLOW") == "true"
+
 MAX_LIKES_PER_ACCOUNT = 3
 MAX_COMMENT_LIKES_PER_POST = 10
 
@@ -63,8 +66,13 @@ def wait_random_delay(min_sec, max_sec):
     time.sleep(delay)
 
 def run_bot(origin="manuel"):
+    # Déterminer le mode de lancement pour le message
+    launch_mode = "🤖 automatique (GitHub Actions)" if IS_GITHUB_ACTION and origin == "auto" else \
+                 "📱 Telegram" if origin == "telegram" else \
+                 "👤 manuel"
+    
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    send_telegram_message(f"🚀 *Script lancé* en mode `{origin}` à `{now}`")
+    send_telegram_message(f"🚀 *Script lancé en mode {launch_mode}* à `{now}`")
 
     cl = init_instagram_client()
     random.shuffle(ACCOUNTS_TO_TARGET)
@@ -125,5 +133,40 @@ def run_bot(origin="manuel"):
     end = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     send_telegram_message(f"✅ *Script terminé* à `{end}`")
 
+def check_telegram_commands():
+    last_update_id = None
+    while True:
+        try:
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
+            if last_update_id:
+                url += f"?offset={last_update_id + 1}"
+            response = requests.get(url)
+            updates = response.json()["result"]
+
+            for update in updates:
+                last_update_id = update["update_id"]
+                message = update.get("message", {})
+                text = message.get("text", "")
+                chat_id = message.get("chat", {}).get("id")
+
+                if text == "/start" and str(chat_id) == TELEGRAM_CHAT_ID:
+                    send_telegram_message("🟢 Commande `/start` reçue. Lancement du bot...")
+                    run_bot("telegram")
+
+        except Exception as e:
+            print(f"[Command Check Error] {e}")
+        
+        time.sleep(3600)  # Vérifie toutes les heures
+
+
 if __name__ == "__main__":
-    run_bot()
+    from threading import Thread
+
+    # Lancer en mode planifié ET écouter les commandes Telegram en parallèle
+    Thread(target=check_telegram_commands).start()
+    
+    # Si on est dans GitHub Actions, lancer automatiquement
+    if IS_GITHUB_ACTION:
+        run_bot("auto")
+    # Sinon, on peut choisir de lancer manuellement en décommentant la ligne ci-dessous
+    # run_bot("manuel")
