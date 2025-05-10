@@ -17,9 +17,6 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 SETTINGS_PATH = "settings.json"
 
-# Déterminer si on est dans GitHub Actions
-IS_GITHUB_ACTION = os.getenv("GITHUB_WORKFLOW") == "true"
-
 MAX_LIKES_PER_ACCOUNT = 3
 MAX_COMMENT_LIKES_PER_POST = 10
 
@@ -94,8 +91,12 @@ def wait_random_delay(min_sec, max_sec, stats):
     time.sleep(delay)
 
 def run_bot(origin="manuel"):
+
+    stats = BotStats()
+
+
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    send_telegram_message(f"🚀 *Script lancé en mode {launch_mode}* à `{now}`")
+    send_telegram_message(f"🚀 *Script lancé* en mode `{origin}` à `{now}`")
 
     cl = init_instagram_client()
     random.shuffle(ACCOUNTS_TO_TARGET)
@@ -160,15 +161,7 @@ def run_bot(origin="manuel"):
 
     end = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     send_telegram_message(f"✅ *Script terminé* à `{end}`")
+    send_telegram_message(stats.get_summary())
 
 if __name__ == "__main__":
-    from threading import Thread
-
-    # Lancer en mode planifié ET écouter les commandes Telegram en parallèle
-    Thread(target=check_telegram_commands).start()
-    
-    # Si on est dans GitHub Actions, lancer automatiquement
-    if IS_GITHUB_ACTION:
-        run_bot("auto")
-    # Sinon, on peut choisir de lancer manuellement en décommentant la ligne ci-dessous
-    # run_bot("manuel")
+    run_bot()
